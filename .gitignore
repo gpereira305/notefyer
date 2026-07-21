@@ -1,0 +1,10 @@
+.db_data/
+docker/mysql/data/
+
+.env
+.env.local
+
+.DS_Store
+Thumbs.db
+
+vendor/
