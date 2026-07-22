@@ -55,6 +55,11 @@ th {
     background-color: #f4f4f4;
 }
 
+.status {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 .status_PENDING {
     color: #ffc107;
 }
@@ -63,6 +68,15 @@ th {
     color: #28a745;
 }
 
-.status_FAILED {
+.status_FAILED,
+.error {
     color: #dc3545;
+}
+
+.error,
+.empty {
+    text-align: center;
+    padding: 20px;
+    font-size: 1rem;
+    font-weight: 600;
 }
