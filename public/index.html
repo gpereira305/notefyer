@@ -8,8 +8,8 @@
     <script src="index.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <h2>Enviar Notificação</h2>
+    <main class="container">
+        <h1>Enviar Notificação</h1>
         <form id="notificationForm">
             <div class="form-group">
                 <label for="email">E-mail:</label>
@@ -19,23 +19,26 @@
                 <label for="message">Mensagem:</label>
                 <textarea id="message" rows="4" required></textarea>
             </div>
-            <button type="submit">Enviar via AJAX</button>
+            <button type="submit" id="sendButton" class="success">Enviar via AJAX</button>
         </form>
 
-        <hr style="margin-top: 30px" />
+        <hr style="margin: 60px 0" />
 
-        <h2>Histórico de Notificações</h2>
-        <table>
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>E-mail</th>
-                <th>Mensagem</th>
-                <th>Status</th>
-            </tr>
-            </thead>
-            <tbody id="notificationsTable"></tbody>
-        </table>
-    </div>
+        <section>
+            <h2>Histórico</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>E-mail</th>
+                    <th>Mensagem</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="notificationsTable"></tbody>
+            </table>
+            <button type="button" id="clearButton" class="danger">Limpar histórico</button>
+        </section>
+    </main>
 </body>
 </html>
