@@ -58,3 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    try {
+        $deleted = $pdo->exec("DELETE FROM notifications");
+        echo json_encode(['success' => true, 'deleted' => $deleted]);
+        exit;
+    } catch (PDOException $e) {
+        error_log($e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Falha ao limpar notificações!']);
+        exit;
+    }
+}
