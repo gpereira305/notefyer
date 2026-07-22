@@ -1,41 +1,48 @@
 
 services:
-   webserver:
-     image: nginx:alpine
-     container_name: notefyer_nginx
-     ports:
-       - "8080:80"
-     volumes:
-       - ./:/var/www/html
-       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-     depends_on:
-       - php
-   php:
-     image: php:7.4-fpm
-     container_name: notefyer_php
-     volumes:
-       - ./:/var/www/html
-     working_dir: /var/www/html
-   db:
-     image: mariadb:10.5
-     container_name: notefyer_db
-     environment:
-       MYSQL_ROOT_PASSWORD: rootpassword
-       MYSQL_DATABASE: notefyer_db
-       MYSQL_USER: notefyer_user
-       MYSQL_PASSWORD: notefyer_password
-     ports:
-       - "3307:3307"
-     volumes:
-       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
-   rabbitmq:
-      image: rabbitmq:3-management
-      container_name: notefyer_rabbitmq
-      ports:
-        - "5673:5673"
-        - "15673:15673"
-   memcached:
-      image: memcached:alpine
-      container_name: notefyer_memcached
-      ports:
-        - "11211:11211"
+  webserver:
+    image: nginx:alpine
+    container_name: notefyer_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: notefyer_php
+    container_name: notefyer_php
+    environment:
+      - DB_HOST=db
+    env_file:
+      - .env
+    volumes:
+      - ./:/var/www/html
+    working_dir: /var/www/html
+  db:
+    image: mariadb:10.5
+    container_name: notefyer_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3307"
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: notefyer_rabbitmq
+    ports:
+      - "5673:5673"
+      - "15673:15673"
+  memcached:
+    image: memcached:alpine
+    container_name: notefyer_memcached
+    ports:
+      - "11211:11211"
