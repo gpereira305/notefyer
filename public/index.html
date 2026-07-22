@@ -1,145 +1,96 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Painel de Notificações</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-        line-height: 1.6;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-      }
-      .form-group {
-        margin-bottom: 15px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-      input[type="email"],
-      textarea {
-        width: 100%;
-        padding: 8px;
-        box-sizing: border-box;
-      }
-      button {
-        padding: 10px 15px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        cursor: pointer;
-      }
-      button:hover {
-        background-color: #218838;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background-color: #f4f4f4;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h2>Enviar Notificação</h2>
-      <form id="notificationForm">
+    <link rel="stylesheet" href="style.css" />
+    <title>Notefyer | Painel de Notificações</title>
+</head>
+<body>
+<div class="container">
+    <h2>Enviar Notificação</h2>
+    <form id="notificationForm">
         <div class="form-group">
-          <label for="email">E-mail:</label>
-          <input type="email" id="email" required />
+            <label for="email">E-mail:</label>
+            <input type="email" id="email" required />
         </div>
         <div class="form-group">
-          <label for="message">Mensagem:</label>
-          <textarea id="message" rows="4" required></textarea>
+            <label for="message">Mensagem:</label>
+            <textarea id="message" rows="4" required></textarea>
         </div>
         <button type="submit">Enviar via AJAX</button>
-      </form>
-      <hr style="margin-top: 30px" />
-      <h2>Histórico de Notificações</h2>
-      <table>
+    </form>
+
+    <hr style="margin-top: 30px" />
+
+    <h2>Histórico de Notificações</h2>
+    <table>
         <thead>
-          <tr>
+        <tr>
             <th>ID</th>
             <th>E-mail</th>
             <th>Mensagem</th>
             <th>Status</th>
-          </tr>
+        </tr>
         </thead>
-        <tbody id="notificationsTable">
-          <!-- Conteúdo deve ser preenchido via AJAX -->
-        </tbody>
-      </table>
-    </div>
-    <script>
-      const form = document.getElementById("notificationForm");
-      const tableBody = document.getElementById("notificationsTable");
+        <tbody id="notificationsTable"></tbody>
+    </table>
+</div>
+<script>
+    const form = document.getElementById("notificationForm");
+    const tableBody = document.getElementById("notificationsTable");
+    const emailInput = document.getElementById("email");
+    const messageInput = document.getElementById("message");
 
-      // Load notifications on page load
-      loadNotifications();
+    loadNotifications();
 
-      // Handle form submission
-      form.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const email = document.getElementById("email").value;
-        const message = document.getElementById("message").value;
-
         try {
-          const response = await fetch("api.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, message }),
-          });
+            const response = await fetch("api.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: emailInput.value,
+                    message: messageInput.value
+                }),
+            });
 
-          const result = await response.json();
+            const result = await response.json();
 
-          if (result.success) {
-            form.reset();
-            loadNotifications(); // Refresh table
-          }
+            if (result.success) {
+                form.reset();
+                await loadNotifications();
+            }
         } catch (error) {
-          console.error("Error:", error);
+            console.error("Error:", error);
         }
-      });
+    });
 
-      // Load and display notifications
-      async function loadNotifications() {
+    async function loadNotifications() {
         try {
-          const response = await fetch("api.php");
-          const notifications = await response.json();
-
-          tableBody.innerHTML = notifications
-            .map(
-              (
-                n,
-              ) => `                                                           
-               <tr>                                                                                                 
-                   <td>${n.id}</td>                                                                                 
-                   <td>${n.email}</td>                                                                              
-                   <td>${n.message}</td>                                                                            
-                   <td>${n.status}</td>                                                                             
-               </tr>                                                                                                
-           `,
-            )
-            .join("");
+            const response = await fetch("api.php");
+            const notifications = await response.json();
+            handleMountNotificationTable(notifications);
         } catch (error) {
-          console.error("Error:", error);
+            console.error("Error:", error);
         }
-      }
-    </script>
-  </body>
+    }
+
+    function handleMountNotificationTable(notifications) {
+        tableBody.innerHTML = notifications?.map((notification) => {
+            const { id, email, message, status } = notification;
+            return `
+               <tr>
+                   <td>${id}</td>
+                   <td>${email}</td>
+                   <td>${message}</td>
+                   <td class="status_${status}">${status}</td>
+               </tr>
+           `;
+        }).join("");
+    }
+</script>
+</body>
 </html>
