@@ -3,9 +3,17 @@ const tableBody = document.getElementById("notificationsTable");
 const emailInput = document.getElementById("email");
 const messageInput = document.getElementById("message");
 const clearButton = document.getElementById("clearButton");
-const sendButton = document.getElementById("sendButton");
 
-loadNotifications().catch(error => console.error("Erro ao carregar notificações:", error));
+handleFetchAllNotifications().catch(error => console.error("Erro ao carregar notificações:", error));
+
+messageInput.addEventListener('input', (event) => {
+    const MAX_CHARS = 50;
+    const value = event.target.value;
+
+    if (value.length > MAX_CHARS) {
+        event.target.value = value.slice(0, MAX_CHARS);
+    }
+});
 
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -16,30 +24,34 @@ form.addEventListener("submit", async (e) => {
     }
 
     try {
-        const response = await fetch("api.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                email: emailInput.value,
-                message: messageInput.value
-            }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            form.reset();
-            await loadNotifications();
-        } else {
-            showError(result.error || "Falha ao enviar notificação");
-        }
+        await handlePostNotification();
     } catch (error) {
         console.error("Error:", error);
         showError("Erro de rede ao contatar o servidor");
     }
 });
 
-async function loadNotifications() {
+async function handlePostNotification() {
+    const response = await fetch("api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: emailInput.value,
+            message: messageInput.value
+        }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        form.reset();
+        await handleFetchAllNotifications();
+    } else {
+        showError(result.error || "Falha ao enviar notificação");
+    }
+}
+
+async function handleFetchAllNotifications() {
     try {
         const response = await fetch("api.php");
         const data = await response.json();
@@ -47,6 +59,7 @@ async function loadNotifications() {
         displayClearButton(data);
     } catch (error) {
         console.error("Error:", error);
+        showError("Erro ao carregar notificações!");
     }
 }
 
@@ -79,7 +92,7 @@ function showError(message) {
 }
 
 function showEmptyMessage() {
-    tableBody.innerHTML = `<tr><td class="empty" colspan="4">Não há mensagens :(</td></tr>`;
+    tableBody.innerHTML = `<tr><td class="empty" colspan="4">Não há mensagens para exibir :(</td></tr>`;
 }
 
 function escapeHtml(value) {
@@ -95,26 +108,28 @@ clearButton.addEventListener("click", async () => {
     }
 
     try {
-        const response = await fetch("api.php", {
-            method: "DELETE",
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            await loadNotifications();
-        } else {
-            showError(result.error || "Falha ao limpar notificações!");
-        }
+        await handleDeleteAllNotifications();
     } catch (error) {
         console.error("Error:", error);
         showError("Erro de rede ao contatar o servidor!");
     }
 });
 
-function displayClearButton(notifications) {
-    if (notifications.length > 0) {
-        clearButton.style.display = "block";
+async function handleDeleteAllNotifications() {
+    const response = await fetch("api.php", {
+        method: "DELETE",
+    });
+    const result = await response.json();
+
+    if (result.success) {
+        await handleFetchAllNotifications();
     } else {
+        showError(result.error || "Falha ao remover notificações!");
+    }
+}
+
+function displayClearButton(notifications) {
+    if (notifications.length === 0) {
         clearButton.style.display = "none";
     }
 }
