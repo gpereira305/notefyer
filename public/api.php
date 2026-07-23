@@ -1,73 +1,109 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
 
-$host = getenv('DB_HOST');
-$db   = getenv('MYSQL_DATABASE');
-$user = getenv('MYSQL_USER');
-$pass = getenv('MYSQL_PASSWORD');
+header('Content-Type: application/json; charset=utf-8');
+class NotificationAPI
+{
+    private PDO $pdo;
+
+    public function __construct() {
+        $host = getenv('DB_HOST');
+        $db   = getenv('MYSQL_DATABASE');
+        $user = getenv('MYSQL_USER');
+        $pass = getenv('MYSQL_PASSWORD');
+
+        $this->pdo = new PDO(
+            "mysql:host=$host;dbname=$db;charset=utf8mb4",
+            $user,
+            $pass,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+    }
+
+    public function createNotification(string $email, string $message): array
+    {
+        try {
+            $insertNotifications = $this->pdo->prepare("INSERT INTO notifications (email, message) VALUES (?, ?)");
+            $insertNotifications->execute([$email, $message]);
+            return ['success' => true, 'id' => $this->pdo->lastInsertId()];
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            http_response_code(500);
+            return ['error' => 'Falha ao salvar notificação!'];
+        }
+    }
+
+    public function getNotifications(): array
+    {
+        try {
+            $selectNotifications = $this->pdo->query("SELECT * FROM notifications ORDER BY created_at DESC");
+            return $selectNotifications->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            http_response_code(500);
+            return ['error' => 'Falha ao buscar notificações!'];
+        }
+    }
+
+    public function clearNotifications(): array
+    {
+        try {
+            $deleteNotifications = $this->pdo->query("DELETE FROM notifications");
+            return ['success' => true, 'deleted' => $deleteNotifications->rowCount()];
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            http_response_code(500);
+            return ['error' => 'Falha ao remover notificações!'];
+        }
+    }
+
+    private function requestOperations(array $data): void
+    {
+          switch ($_SERVER['REQUEST_METHOD'])  {
+              case 'POST':
+                  $email = $data['email'] ?? null;
+                  $message = $data['message'] ?? null;
+                  self::throwErrorForEmptyEmailOrMessage($email, $message);
+                  echo json_encode($this->createNotification($email, $message));
+                  break;
+              case 'GET':
+                  echo json_encode($this->getNotifications());
+                  break;
+              case 'DELETE':
+                  echo json_encode($this->clearNotifications());
+                  break;
+              default:
+                  http_response_code(405);
+                  echo json_encode(['error' => 'Método não permitido!']);
+          }
+    }
+
+    private static function throwErrorForEmptyEmailOrMessage(string $email, string $message): void
+    {
+        if (!$email || !$message) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Email e mensagem são obrigatórios!']);
+            exit;
+        }
+    }
+
+    public function handleRequests(): void
+    {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $this->requestOperations($data ?? []);
+        } catch (RuntimeException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+    }
+}
 
 try {
-    $pdo = new PDO(
-        "mysql:host=$host;dbname=$db;charset=utf8mb4",
-        $user,
-        $pass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
+    $api = new NotificationAPI();
+    $api->handleRequests();
 } catch (PDOException $e) {
     error_log($e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Falha ao conectar ao banco de dados!']);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $data = json_decode(file_get_contents('php://input'), true);
-        $email = $data['email'] ?? null;
-        $message = $data['message'] ?? null;
-
-        if (!$email || !$message) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Email e messagem são obrigatórios!']);
-            exit;
-        }
-
-        $insertNotifications = $pdo->prepare("INSERT INTO notifications (email, message) VALUES (?, ?)");
-        $insertNotifications->execute([$email, $message]);
-
-        echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
-        exit;
-    } catch (PDOException $e) {
-        error_log($e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => 'Falha ao salvar notificação!']);
-        exit;
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    try {
-        $queryNotifications = $pdo->query("SELECT * FROM notifications ORDER BY created_at DESC");
-        $notifications = $queryNotifications->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($notifications);
-        exit;
-    } catch (PDOException $e) {
-        error_log($e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => 'Falha ao carregar notificações!']);
-        exit;
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-    try {
-        $deleted = $pdo->exec("DELETE FROM notifications");
-        echo json_encode(['success' => true, 'deleted' => $deleted]);
-        exit;
-    } catch (PDOException $e) {
-        error_log($e->getMessage());
-        http_response_code(500);
-        echo json_encode(['error' => 'Falha ao limpar notificações!']);
-        exit;
-    }
 }
