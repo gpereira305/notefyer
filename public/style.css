@@ -29,6 +29,8 @@ textarea {
     padding: 8px;
     box-sizing: border-box;
     resize: none;
+    font-family: inherit;
+    font-size: 1rem;
 }
 
 button {
@@ -51,7 +53,7 @@ button.danger {
 }
 
 button:hover {
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
 section {
@@ -75,6 +77,10 @@ td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
+}
+
+td {
+    color: #424242;
 }
 
 th {
@@ -105,4 +111,5 @@ th {
     padding: 20px;
     font-size: 1rem;
     font-weight: 600;
+    color: inherit;
 }

@@ -9,18 +9,22 @@
 </head>
 <body>
     <main class="container">
-        <h1>Enviar Notificação</h1>
-        <form id="notificationForm">
-            <div class="form-group">
-                <label for="email">E-mail:</label>
-                <input type="email" id="email" required />
-            </div>
-            <div class="form-group">
-                <label for="message">Mensagem:</label>
-                <textarea id="message" rows="4" required></textarea>
-            </div>
-            <button type="submit" id="sendButton" class="success">Enviar via AJAX</button>
-        </form>
+        <h1 style="display: none">NoteFyer app</h1>
+        <section>
+            <h2>Enviar Notificação</h2>
+
+            <form id="notificationForm">
+                <div class="form-group">
+                    <label for="email">E-mail:</label>
+                    <input type="email" id="email" placeholder="Digite seu e-mail" required />
+                </div>
+                <div class="form-group">
+                    <label for="message">Mensagem:</label>
+                    <textarea id="message" rows="4" maxlength="50" placeholder="Digite uma mensagem entre 5 e 50 caracteres" required></textarea>
+                </div>
+                <button type="submit" id="sendButton" class="success">Enviar via AJAX</button>
+            </form>
+        </section>
 
         <hr style="margin: 60px 0" />
 
