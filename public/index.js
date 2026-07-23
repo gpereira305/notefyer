@@ -4,6 +4,8 @@ const emailInput = document.getElementById("email");
 const messageInput = document.getElementById("message");
 const clearButton = document.getElementById("clearButton");
 
+const API_URL = "api.php";
+
 handleFetchAllNotifications().catch(error => console.error("Erro ao carregar notificações:", error));
 
 messageInput.addEventListener('input', (event) => {
@@ -32,7 +34,7 @@ form.addEventListener("submit", async (e) => {
 });
 
 async function handlePostNotification() {
-    const response = await fetch("api.php", {
+    const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -53,7 +55,7 @@ async function handlePostNotification() {
 
 async function handleFetchAllNotifications() {
     try {
-        const response = await fetch("api.php");
+        const response = await fetch(API_URL);
         const data = await response.json();
         handleMountNotificationTable(data);
         displayClearButton(data);
@@ -76,23 +78,37 @@ function handleMountNotificationTable(notifications) {
 
     tableBody.innerHTML = notifications.map((notification) => {
         const { id, email, message, status } = notification;
-        return `<tr>
-                   <td>${escapeHtml(id)}</td>
-                   <td>${escapeHtml(email)}</td>
-                   <td>${escapeHtml(message)}</td>
-                   <td class="status status_${status}">
-                     ${escapeHtml(status)}
-                   </td>
-               </tr>`;
+        return `
+            <tr>
+               <td>${escapeHtml(id)}</td>
+               <td>${escapeHtml(email)}</td>
+               <td>${escapeHtml(message)}</td>
+               <td class="status status_${status}">
+                 ${escapeHtml(status)}
+               </td>
+            </tr>
+        `;
     }).join("");
 }
 
 function showError(message) {
-    tableBody.innerHTML = `<tr><td class="error" colspan="4">⚠ ${escapeHtml(message)}</td></tr>`;
+    tableBody.innerHTML = `
+        <tr>
+            <td class="error" colspan="4">
+                ⚠ ${escapeHtml(message)}
+            </td>
+        </tr>
+    `;
 }
 
 function showEmptyMessage() {
-    tableBody.innerHTML = `<tr><td class="empty" colspan="4">Não há mensagens para exibir :(</td></tr>`;
+    tableBody.innerHTML = `
+        <tr>
+            <td class="empty" colspan="4">
+                Não há mensagens para exibir :(
+            </td>
+        </tr>
+    `;
 }
 
 function escapeHtml(value) {
@@ -116,7 +132,7 @@ clearButton.addEventListener("click", async () => {
 });
 
 async function handleDeleteAllNotifications() {
-    const response = await fetch("api.php", {
+    const response = await fetch(API_URL, {
         method: "DELETE",
     });
     const result = await response.json();
