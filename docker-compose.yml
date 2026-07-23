@@ -39,8 +39,34 @@ services:
     image: rabbitmq:3-management
     container_name: notefyer_rabbitmq
     ports:
-      - "5673:5673"
-      - "15673:15673"
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: notefyer_php
+    container_name: notefyer_worker
+    env_file:
+      - .env
+    volumes:
+      - ./:/var/www/html
+    working_dir: /var/www/html
+    command: php worker.php
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_started
+    restart: unless-stopped
   memcached:
     image: memcached:alpine
     container_name: notefyer_memcached
