@@ -1,6 +1,5 @@
 <?php
 
-
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Notefyer\RabbitMQ;
@@ -25,26 +24,26 @@ $pdo = new PDO(
 
 $rabbitmq = new RabbitMQ($host, $port, $user, $pass, $queue);
 
-$callback = function ($message) use ($pdo) {
+$consumerCallback = static function ($message) use ($pdo) {
     $data = json_decode($message->body, true);
 
     if (!is_array($data) || !isset($data['id'])) {
-        error_log("Malformed message, dropping: {$message->body}");
-        $message->nack(false); // requeue=false: don't loop forever on garbage
+        error_log("Erro ao formatar mensagem: {$message->body}");
+        $message->nack(false);
         return;
     }
 
     try {
-        $stmt = $pdo->prepare("UPDATE notifications SET status = 'PROCESSED' WHERE id = ?");
-        $stmt->execute([$data['id']]);
+        $updateMsgToProcessed = $pdo->prepare("UPDATE notifications SET status = 'PROCESSED' WHERE id = ?");
+        $updateMsgToProcessed->execute([$data['id']]);
 
-        echo "Processed notification ID: {$data['id']}\n";
+        echo "ID da mensagem processada: {$data['id']}\n";
         $message->ack();
     } catch (\Throwable $e) {
-        error_log("Failed to update notification ID {$data['id']}: " . $e->getMessage());
-        $message->nack(true); // requeue=true: try again on next delivery
+        error_log("Falha ao atualizar o ID {$data['id']}: " . $e->getMessage());
+        $message->nack(true);
     }
 };
 
-$rabbitmq->consume($callback);
+$rabbitmq->consume($consumerCallback);
 $rabbitmq->close();
