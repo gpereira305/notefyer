@@ -147,5 +147,7 @@ async function handleDeleteAllNotifications() {
 function displayClearButton(notifications) {
     if (notifications.length === 0) {
         clearButton.style.display = "none";
+    } else {
+        clearButton.style.display = "block";
     }
 }
