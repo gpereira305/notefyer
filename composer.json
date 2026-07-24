@@ -1,0 +1,23 @@
+{
+  "name": "vendor_name/notefyer",
+  "description": "description",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Giovane Pereira",
+      "email": "giovane305pereira@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^7.4",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "php-amqplib/php-amqplib": "^3.7"
+  },
+  "autoload": {
+    "psr-4": {
+      "Notefyer\\": "public/"
+    }
+  }
+}

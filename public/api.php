@@ -1,5 +1,8 @@
 <?php
 
+use Notefyer\RabbitMQ;
+
+require_once __DIR__ . '/../vendor/autoload.php';
 header('Content-Type: application/json; charset=utf-8');
 class NotificationAPI
 {
@@ -17,19 +20,6 @@ class NotificationAPI
             $pass,
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
-    }
-
-    public function createNotification(string $email, string $message): array
-    {
-        try {
-            $insertNotifications = $this->pdo->prepare("INSERT INTO notifications (email, message) VALUES (?, ?)");
-            $insertNotifications->execute([$email, $message]);
-            return ['success' => true, 'id' => $this->pdo->lastInsertId()];
-        } catch (PDOException $e) {
-            error_log($e->getMessage());
-            http_response_code(500);
-            return ['error' => 'Falha ao salvar notificação!'];
-        }
     }
 
     public function getNotifications(): array
@@ -75,6 +65,39 @@ class NotificationAPI
                   http_response_code(405);
                   echo json_encode(['error' => 'Método não permitido!']);
           }
+    }
+
+    public function createNotification(string $email, string $message): array
+    {
+        try {
+            $insertNotifications = $this->pdo->prepare("INSERT INTO notifications (email, message, status) VALUES (?, ?, 'PENDING')");
+            $insertNotifications->execute([$email, $message]);
+            $notificationId = $this->pdo->lastInsertId();
+
+            $rabbitmq = new RabbitMQ(
+                getenv('RABBITMQ_HOST'),
+                (int)getenv('RABBITMQ_PORT'),
+                getenv('RABBITMQ_USER'),
+                getenv('RABBITMQ_PASSWORD'),
+                getenv('RABBITMQ_QUEUE')
+            );
+
+            try {
+                $rabbitmq->publish([
+                    'id' => $notificationId,
+                    'email' => $email,
+                    'message' => $message
+                ]);
+            } finally {
+                $rabbitmq->close();
+            }
+
+            return ['success' => true, 'id' => $notificationId];
+        } catch (\Throwable $e) {
+            error_log($e->getMessage());
+            http_response_code(500);
+            return ['error' => 'Falha ao salvar notificação!'];
+        }
     }
 
     private static function throwErrorForEmptyEmailOrMessage(string $email, string $message): void
