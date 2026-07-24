@@ -14,6 +14,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    user: "1000:1000"
     image: notefyer_php
     container_name: notefyer_php
     environment:
@@ -49,18 +50,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  worker:
+  consumer:
     build:
       context: .
       dockerfile: Dockerfile
     image: notefyer_php
-    container_name: notefyer_worker
+    container_name: notefyer_consumer
     env_file:
       - .env
     volumes:
       - ./:/var/www/html
     working_dir: /var/www/html
-    command: php worker.php
+    command: php consumer.php
     depends_on:
       rabbitmq:
         condition: service_healthy

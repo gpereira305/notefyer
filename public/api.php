@@ -1,5 +1,7 @@
 <?php
 
+use Notefyer\RabbitMQ;
+
 require_once __DIR__ . '/../vendor/autoload.php';
 header('Content-Type: application/json; charset=utf-8');
 class NotificationAPI
@@ -19,19 +21,6 @@ class NotificationAPI
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
     }
-
-//    public function createNotification(string $email, string $message): array
-//    {
-//        try {
-//            $insertNotifications = $this->pdo->prepare("INSERT INTO notifications (email, message) VALUES (?, ?)");
-//            $insertNotifications->execute([$email, $message]);
-//            return ['success' => true, 'id' => $this->pdo->lastInsertId()];
-//        } catch (PDOException $e) {
-//            error_log($e->getMessage());
-//            http_response_code(500);
-//            return ['error' => 'Falha ao salvar notificação!'];
-//        }
-//    }
 
     public function getNotifications(): array
     {
@@ -85,7 +74,7 @@ class NotificationAPI
             $insertNotifications->execute([$email, $message]);
             $notificationId = $this->pdo->lastInsertId();
 
-            $rabbitmq = new \Notefyer\RabbitMQ(
+            $rabbitmq = new RabbitMQ(
                 getenv('RABBITMQ_HOST'),
                 (int)getenv('RABBITMQ_PORT'),
                 getenv('RABBITMQ_USER'),
@@ -93,16 +82,18 @@ class NotificationAPI
                 getenv('RABBITMQ_QUEUE')
             );
 
-            $rabbitmq->publish([
-                'id' => $notificationId,
-                'email' => $email,
-                'message' => $message
-            ]);
-
-            $rabbitmq->close();
+            try {
+                $rabbitmq->publish([
+                    'id' => $notificationId,
+                    'email' => $email,
+                    'message' => $message
+                ]);
+            } finally {
+                $rabbitmq->close();
+            }
 
             return ['success' => true, 'id' => $notificationId];
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             error_log($e->getMessage());
             http_response_code(500);
             return ['error' => 'Falha ao salvar notificação!'];

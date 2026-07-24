@@ -12,7 +12,7 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
                                               │                             │ consume
                                               ▼                             ▼
                                         ┌──────────┐               ┌──────────────┐
-                                        │ MariaDB  │ ◂──────────── │   Worker     │
+                                        │ MariaDB  │ ◂──────────── │   Consumer   │
                                         │ (MySQL)  │   UPDATE      │  (PHP CLI)   │
                                         └──────────┘               └──────────────┘
 ```
@@ -22,7 +22,7 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 1. O usuário preenche o formulário com **e-mail** e **mensagem** e clica em "Enviar".
 2. O frontend envia uma requisição `POST` para `/api.php` com os dados em JSON.
 3. A API insere a notificação no banco MariaDB com status `PENDING` e publica a mensagem na fila do RabbitMQ.
-4. O **worker** (`worker.php`) consome a mensagem da fila, simula o processamento e atualiza o status para `PROCESSED` no banco de dados.
+4. O **consumer** (`consumer.php`) consome a mensagem da fila, simula o processamento e atualiza o status para `PROCESSED` no banco de dados.
 5. O frontend lista o histórico de notificações via `GET /api.php`, exibindo o status atualizado de cada uma.
 
 ## Stack Tecnológica
@@ -75,7 +75,7 @@ docker compose up --build -d
 
 Esse comando vai:
 - Construir a imagem PHP com as extensões necessárias (`pdo_mysql`, `sockets`)
-- Iniciar 5 serviços: **Nginx**, **PHP-FPM**, **Worker**, **MariaDB** e **RabbitMQ**
+- Iniciar 5 serviços: **Nginx**, **PHP-FPM**, **Consumer**, **MariaDB** e **RabbitMQ**
 - Executar o `schema.sql` automaticamente para criar a tabela `notifications`
 
 ### 4. Acessar a aplicação
@@ -99,7 +99,7 @@ docker compose ps
 Todos os 5 containers devem estar com status `Up`:
 - `notefyer_nginx`
 - `notefyer_php`
-- `notefyer_worker`
+- `notefyer_consumer`
 - `notefyer_db`
 - `notefyer_rabbitmq`
 - `notefyer_memcached`
@@ -111,7 +111,7 @@ Todos os 5 containers devem estar com status `Up`:
 3. Preencha o campo **Mensagem** com o conteúdo (mínimo de 6 caracteres).
 4. Clique em **Enviar via AJAX**.
 5. A notificação aparecerá na tabela com status `PENDING`.
-6. Após o processamento pelo worker (≈1 segundo), o status mudará para `PROCESSED`.
+6. Após o processamento pelo consumer (≈1 segundo), o status mudará para `PROCESSED`.
 
 ## Endpoints da API
 
@@ -140,15 +140,14 @@ notefyer/
 │   ├── api.php              # API REST (POST/GET/DELETE)
 │   ├── index.html           # Interface web
 │   ├── index.js             # Lógica do frontend
+│   ├── RabbitMQ.php         # Classe wrapper do php-amqplib
 │   └── style.css            # Estilos
-├── src/
-│   └── RabbitMQ.php         # Classe wrapper do php-amqplib
 ├── .env                     # Variáveis de ambiente
 ├── composer.json            # Dependências PHP
 ├── docker-compose.yml       # Orquestração dos containers
 ├── Dockerfile               # Imagem PHP-FPM 7.4
 ├── schema.sql               # DDL da tabela notifications
-└── worker.php               # Worker que processa a fila
+└── consumer.php            # Consumer que processa a fila
 ```
 
 ## Comandos Úteis
@@ -163,14 +162,14 @@ docker compose down
 # Parar e remover volumes (limpa o banco de dados)
 docker compose down -v
 
-# Ver logs do worker em tempo real
-docker compose logs -f worker
+# Ver logs do consumer em tempo real
+docker compose logs -f consumer
 
 # Ver logs do PHP-FPM
 docker compose logs -f php
 
-# Reiniciar apenas o worker
-docker compose restart worker
+# Reiniciar apenas o consumer
+docker compose restart consumer
 
 # Acessar o MariaDB via CLI
 docker compose exec db mysql -u notefyer_user -p notefyer_db

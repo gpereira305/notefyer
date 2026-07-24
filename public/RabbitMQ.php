@@ -33,7 +33,8 @@ class RabbitMQ
 
     public function consume(callable $callback): void
     {
-        $this->channel->basic_consume($this->queueName, '', false, true, false, false, $callback);
+        // no_ack=false: callback must ack() on success or nack() on failure (no silent message loss)
+        $this->channel->basic_consume($this->queueName, '', false, false, false, false, $callback);
 
         while ($this->channel->is_consuming()) {
             $this->channel->wait();
