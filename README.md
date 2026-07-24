@@ -1,6 +1,8 @@
 # Notefyer
 
 Sistema de notificações assíncronas com fila de mensagens. Permite enviar notificações (e-mail + mensagem) através de uma interface web, que são persistidas no banco de dados e processadas de forma assíncrona via RabbitMQ.
+O e-mail e a mensagem são obrigatórios para a operação ser bem sucessedida. O número mínimo de aceitável caracters no campo de mensagem é de 5 e o máximo é 50. Após a inserção do e-mail e a mensagem, se tudo acorrer bem, um botão para limpar o histórico
+ficarã visível para essa finalidade.
 
 ## Visão Geral da Arquitetura
 
