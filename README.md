@@ -34,7 +34,6 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 | Servidor Web | Nginx (Alpine)       |
 | Banco de Dados | MariaDB 10.5       |
 | Fila de Mensagens | RabbitMQ 3 (com Management UI) |
-| Cache        | Memcached            |
 | Dependências PHP | php-amqplib ^3.7  |
 | Containerização | Docker + Docker Compose |
 
@@ -102,7 +101,6 @@ Todos os 5 containers devem estar com status `Up`:
 - `notefyer_consumer`
 - `notefyer_db`
 - `notefyer_rabbitmq`
-- `notefyer_memcached`
 
 ## Como Usar
 

@@ -68,8 +68,3 @@ services:
       db:
         condition: service_started
     restart: unless-stopped
-  memcached:
-    image: memcached:alpine
-    container_name: notefyer_memcached
-    ports:
-      - "11211:11211"
