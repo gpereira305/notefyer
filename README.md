@@ -1,8 +1,16 @@
 # Notefyer
 
 Sistema de notificações assíncronas com fila de mensagens. Permite enviar notificações (e-mail + mensagem) através de uma interface web, que são persistidas no banco de dados e processadas de forma assíncrona via RabbitMQ.
-O e-mail e a mensagem são obrigatórios para a operação ser bem sucessedida. O número mínimo de aceitável caracters no campo de mensagem é de 5 e o máximo é 50. Após a inserção do e-mail e a mensagem, se tudo acorrer bem, um botão para limpar o histórico
-ficarã visível para essa finalidade.
+
+**Funcionalidades:**
+- Envio de notificações via formulário web com AJAX (sem recarregar a página)
+- Validação client-side: **e-mail obrigatório** e mensagem entre **6 e 50 caracteres**
+- Persistência em MariaDB com transição automática de status `PENDING` → `PROCESSED`
+- Processamento assíncrono via fila do RabbitMQ (consumida por `consumer.php`)
+- Histórico de notificações exibido em tempo real
+- Botão para limpar todo o histórico, exibido apenas quando há notificações
+
+![Interface do app](docs/ui-screen.png)
 
 ## Visão Geral da Arquitetura
 
@@ -55,16 +63,28 @@ cd notefyer
 
 ### 2. Configurar variáveis de ambiente
 
-O arquivo `.env` já contém as configurações padrão. Edite-o se necessário:
+O arquivo `.env` contém as configurações de banco, broker e conexão. Edite-o para ajustar credenciais e hosts. Exemplo:
 
 ```env
-# Configuração do Banco de Dados
+# Banco de Dados (MariaDB)
 MYSQL_ROOT_PASSWORD=root_password
 MYSQL_DATABASE=notefyer_db
 MYSQL_USER=notefyer_user
 MYSQL_PASSWORD=notefyer_password
 
-# Configuração da Aplicação
+# RabbitMQ — credenciais do broker (consumidas pelo docker-compose)
+RABBITMQ_DEFAULT_USER=guest
+RABBITMQ_DEFAULT_PASS=guest
+
+# RabbitMQ — credenciais usadas pela aplicação PHP para conectar à fila
+# (porta AMQP interna do container; 5673 é só o mapeamento para o host)
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
+RABBITMQ_QUEUE=notifications
+
+# Host interno do banco, visível para a aplicação dentro do docker network
 DB_HOST=db
 ```
 
@@ -133,6 +153,9 @@ curl -X POST http://localhost:8080/api.php \
 
 ```
 notefyer/
+├── docs/
+│   ├── notifications-app.png # Diagrama da arquitetura
+│   └── ui-screen.png         # Captura de tela da interface
 ├── docker/
 │   └── nginx/
 │       └── default.conf     # Configuração do Nginx
@@ -187,4 +210,6 @@ docker compose up --build -d
 
 ## Licença
 
-Projeto desenvolvido para fins de estudo.
+Este projeto foi desenvolvido para fins de estudo e é distribuído sob a licença **MIT**. Use, adapte e aprenda livremente — sem garantias.
+
+> ⚠️ A string de licença em `composer.json` ainda está como `proprietary`. Para manter coerência com a intenção do repositório, atualize também o `composer.json` para `"MIT"` (e adicione um arquivo `LICENSE` se for publicado em outro canal além do GitHub).
