@@ -2,7 +2,7 @@
   "name": "vendor_name/notefyer",
   "description": "description",
   "minimum-stability": "stable",
-  "license": "proprietary",
+  "license": "MIT",
   "authors": [
     {
       "name": "Giovane Pereira",
