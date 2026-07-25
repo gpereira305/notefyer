@@ -23,6 +23,7 @@ services:
       - .env
     volumes:
       - ./:/var/www/html
+      - vendor_data:/var/www/html/vendor
     working_dir: /var/www/html
   db:
     image: mariadb:10.5
@@ -60,6 +61,7 @@ services:
       - .env
     volumes:
       - ./:/var/www/html
+      - vendor_data:/var/www/html/vendor
     working_dir: /var/www/html
     command: php consumer.php
     depends_on:
@@ -68,3 +70,6 @@ services:
       db:
         condition: service_started
     restart: unless-stopped
+
+volumes:
+  vendor_data:
