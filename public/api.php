@@ -1,12 +1,15 @@
 <?php
 
 use Notefyer\RabbitMQ;
+use Notefyer\Cache;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 header('Content-Type: application/json; charset=utf-8');
+const CACHE_KEY = 'notifications:list';
 class NotificationAPI
 {
     private PDO $pdo;
+    private Cache $cache;
 
     public function __construct() {
         $host = getenv('DB_HOST');
@@ -20,24 +23,31 @@ class NotificationAPI
             $pass,
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
+
+        $this->cache = new Cache(
+            getenv('MEMCACHED_HOST'),
+            (int)getenv('MEMCACHED_PORT')
+        );
     }
 
     public function getNotifications(): array
     {
-        try {
-            $selectNotifications = $this->pdo->query("SELECT * FROM notifications ORDER BY created_at DESC");
-            return $selectNotifications->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log($e->getMessage());
-            http_response_code(500);
-            return ['error' => 'Falha ao buscar notificações!'];
-        }
+            try {
+                return $this->cache->remember(CACHE_KEY, 5, function () {
+                        return $this->pdo->query("SELECT * FROM notifications ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+                });
+            } catch (PDOException $e) {
+                error_log($e->getMessage());
+                http_response_code(500);
+                return ['error' => 'Falha ao buscar notificações!'];
+            }
     }
 
     public function clearNotifications(): array
     {
         try {
             $deleteNotifications = $this->pdo->query("DELETE FROM notifications");
+            $this->cache->forget(CACHE_KEY);
             return ['success' => true, 'deleted' => $deleteNotifications->rowCount()];
         } catch (PDOException $e) {
             error_log($e->getMessage());
@@ -92,6 +102,7 @@ class NotificationAPI
                 $rabbitmq->close();
             }
 
+            $this->cache->forget(CACHE_KEY);
             return ['success' => true, 'id' => $notificationId];
         } catch (\Throwable $e) {
             error_log($e->getMessage());

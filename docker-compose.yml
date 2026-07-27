@@ -51,6 +51,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  memcached:
+    image: memcached:alpine
+    container_name: notefyer_memcached
+    command: memcached -m 64
+    ports:
+      - "11212:11211"
   consumer:
     build:
       context: .
