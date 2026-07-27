@@ -3,6 +3,7 @@ const tableBody = document.getElementById("notificationsTable");
 const emailInput = document.getElementById("email");
 const messageInput = document.getElementById("message");
 const clearButton = document.getElementById("clearButton");
+const sendButton = document.getElementById("sendButton");
 
 const API_URL = "api.php";
 
@@ -19,9 +20,11 @@ messageInput.addEventListener('input', (event) => {
 
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    standbyForProcessing('processing');
 
     if (messageInput.value.length <= 5) {
         alert("A mensagem deve ter mais de 5 caracteres!");
+        standbyForProcessing();
         return;
     }
 
@@ -30,6 +33,8 @@ form.addEventListener("submit", async (e) => {
     } catch (error) {
         console.error("Error:", error);
         showError("Erro de rede ao contatar o servidor");
+    } finally {
+        standbyForProcessing();
     }
 });
 
@@ -118,16 +123,32 @@ function escapeHtml(value) {
     }[replaceBy]));
 }
 
+function standbyForProcessing(currentState) {
+    const isProcessing = currentState === 'processing';
+
+    sendButton.disabled = isProcessing;
+    clearButton.disabled = isProcessing;
+    sendButton.classList.toggle('processing', isProcessing);
+    sendButton.textContent = isProcessing ? 'Enviando mensagem...' : 'Enviar via AJAX';
+}
+
 clearButton.addEventListener("click", async () => {
     if (!confirm("Tem certeza que deseja limpar todas as notificações?")) {
         return;
     }
 
     try {
+        clearButton.disabled = true;
+        clearButton.classList.add('processing-clear');
+        clearButton.textContent = 'Limpando histórico...';
         await handleDeleteAllNotifications();
     } catch (error) {
         console.error("Error:", error);
         showError("Erro de rede ao contatar o servidor!");
+    } finally {
+        clearButton.disabled = false;
+        clearButton.classList.remove('processing-clear');
+        clearButton.textContent = 'Limpar histórico';
     }
 });
 
