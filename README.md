@@ -9,6 +9,7 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 - Processamento assíncrono via fila do RabbitMQ (consumida por `consumer.php`)
 - Histórico de notificações exibido em tempo real
 - Botão para limpar todo o histórico, exibido apenas quando há notificações
+- **Cache de leitura com Memcached** (TTL de 5s, invalidado em qualquer `POST` ou `DELETE`)
 
 ![Interface do app](docs/ui-screen.png)
 
@@ -16,15 +17,22 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 
 ```
 ┌────────────┐     POST /api.php      ┌──────────────┐    publish     ┌───────────┐
-│  Frontend  │ ──────────────────────▸ │   PHP-FPM    │ ────────────▸ │  RabbitMQ │
-│ (HTML/JS)  │ ◂────── JSON ───────── │   (API)      │               │  (Fila)   │
-└────────────┘     GET /api.php        └──────┬───────┘               └─────┬─────┘
-                                              │                             │ consume
-                                              ▼                             ▼
-                                        ┌──────────┐               ┌──────────────┐
-                                        │ MariaDB  │ ◂──────────── │   Consumer   │
-                                        │ (MySQL)  │   UPDATE      │  (PHP CLI)   │
-                                        └──────────┘               └──────────────┘
+│  Frontend  │ ─────────────────────▸ │   PHP-FPM    │ ────────────▸  │  RabbitMQ │
+│ (HTML/JS)  │ ◂────── JSON ───────── │   (API)      │                │  (Fila)   │
+└────────────┘     POST/GET/DELETE    └─┬──────────┬─┘                └─────┬─────┘
+                                        │ cache    │ invalidate             │ consume
+                                        │ lookup   │ on POST/DEL            ▼
+                                   ┌────┴───────┐  │                 ┌──────────────┐
+                                   │ Memcached  │◂─┘                 │   Consumer   │
+                                   │  (5s TTL)  │                    │  (PHP CLI)   │
+                                   └─────┬──────┘                    └──────┬───────┘
+                                         │ cache miss                       │ UPDATE
+                                         │ (INSERT no POST,                 │
+                                         │  SELECT no GET miss)             ▼
+                                         ▼                              ┌─────────┐
+                                   ┌───────────────────────────────┐    │ MariaDB │
+                                   │     MariaDB   (MySQL)         │──► │ (state) │
+                                   └───────────────────────────────┘    └─────────┘
 ```
 
 ### Fluxo de uma notificação
@@ -33,7 +41,7 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 2. O frontend envia uma requisição `POST` para `/api.php` com os dados em JSON.
 3. A API insere a notificação no banco MariaDB com status `PENDING` e publica a mensagem na fila do RabbitMQ.
 4. O **consumer** (`consumer.php`) consome a mensagem da fila, simula o processamento e atualiza o status para `PROCESSED` no banco de dados.
-5. O frontend lista o histórico de notificações via `GET /api.php`, exibindo o status atualizado de cada uma.
+5. O frontend lista o histórico de notificações via `GET /api.php`. **A leitura passa por um cache Memcached com TTL de 5 s** — em cache miss a API faz `SELECT` no MariaDB e popula o cache; em cache hit, retorna imediatamente. Toda notificação criada via `POST` ou removida via `DELETE` invalida o cache, então o histórico sempre reflete o estado mais recente logo após uma ação do usuário.
 
 ## Stack Tecnológica
 
@@ -44,6 +52,8 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 | Servidor Web | Nginx (Alpine)       |
 | Banco de Dados | MariaDB 10.5       |
 | Fila de Mensagens | RabbitMQ 3 (com Management UI) |
+| Cache de Leitura | Memcached 1.6 (Alpine) |
+| Cliente PHP do Cache | Extensão `memcached-3.2.0` via PECL |
 | Dependências PHP | php-amqplib ^3.7  |
 | Containerização | Docker + Docker Compose |
 
@@ -86,6 +96,11 @@ RABBITMQ_QUEUE=notifications
 
 # Host interno do banco, visível para a aplicação dentro do docker network
 DB_HOST=db
+
+# Memcached — cache de leitura para o endpoint GET /api.php.
+# O `php` service lê estas variáveis via getenv() e cria o cliente em Notefyer\Cache.
+MEMCACHED_HOST=memcached
+MEMCACHED_PORT=11211
 ```
 
 ### 3. Iniciar os containers
@@ -95,8 +110,8 @@ docker compose up --build -d
 ```
 
 Esse comando vai:
-- Construir a imagem PHP com as extensões necessárias (`pdo_mysql`, `sockets`)
-- Iniciar 5 serviços: **Nginx**, **PHP-FPM**, **Consumer**, **MariaDB** e **RabbitMQ**
+- Construir a imagem PHP com as extensões necessárias (`pdo_mysql`, `sockets`, `memcached` — esta última via PECL no build)
+- Iniciar 6 serviços: **Nginx**, **PHP-FPM**, **Consumer**, **MariaDB**, **RabbitMQ** e **Memcached**
 - Executar o `schema.sql` automaticamente para criar a tabela `notifications`
 
 ### 4. Acessar a aplicação
@@ -106,10 +121,18 @@ Esse comando vai:
 | Aplicação Web        | http://localhost:8080         |
 | RabbitMQ Management  | http://localhost:15673        |
 | MariaDB              | `localhost:3307`              |
+| Memcached (debug)    | `localhost:11212` (→ 11211 do container) |
 
 Para acessar o painel do RabbitMQ, use as credenciais padrão:
 - **Usuário:** `guest`
 - **Senha:** `guest`
+
+A porta `11212` do host mapeia para a `11211` interna do container Memcached. Útil só para diagnóstico manual — a aplicação alcança o Memcached pela rede do docker e não passa por esta porta.
+
+```bash
+echo "stats" | nc localhost 11212 | head -20   # contadores ao vivo (hits / misses / cmd_set / uptime)
+echo -e "get notifications:list\r" | nc localhost 11212   # inspecionar a chave do cache
+```
 
 ### 5. Verificar se tudo está rodando
 
@@ -117,12 +140,13 @@ Para acessar o painel do RabbitMQ, use as credenciais padrão:
 docker compose ps
 ```
 
-Todos os 5 containers devem estar com status `Up`:
+Todos os 6 containers devem estar com status `Up`:
 - `notefyer_nginx`
 - `notefyer_php`
 - `notefyer_consumer`
 - `notefyer_db`
 - `notefyer_rabbitmq`
+- `notefyer_memcached`
 
 ## Como Usar
 
@@ -160,7 +184,8 @@ notefyer/
 │   └── nginx/
 │       └── default.conf     # Configuração do Nginx
 ├── public/
-│   ├── api.php              # API REST (POST/GET/DELETE)
+│   ├── api.php              # API REST (POST/GET/DELETE) com cache-aside via Cache.php
+│   ├── Cache.php            # Cliente Memcached (DI-injectable; `remember()` / `forget()` / `getStats()`)
 │   ├── index.html           # Interface web
 │   ├── index.js             # Lógica do frontend
 │   ├── RabbitMQ.php         # Classe wrapper do php-amqplib

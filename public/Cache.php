@@ -18,7 +18,7 @@ class Cache
         ]);
     }
 
-    public function remember(string $key, int $ttl, callable $producer)
+    public function remember(string $key, int $timeTolive, callable $producer)
     {
         $cached = $this->client->get($key);
         if ($cached !== false) {
@@ -27,7 +27,7 @@ class Cache
 
         $value = $producer();
         if($value !== null && $value !== false) {
-            $this->client->set($key, $value, $ttl);
+            $this->client->set($key, $value, $timeTolive);
         }
         return $value;
     }
@@ -43,4 +43,3 @@ class Cache
         return $stats ? reset($stats) : [];
     }
 }
-
