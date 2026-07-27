@@ -41,7 +41,7 @@ Sistema de notificações assíncronas com fila de mensagens. Permite enviar not
 2. O frontend envia uma requisição `POST` para `/api.php` com os dados em JSON.
 3. A API insere a notificação no banco MariaDB com status `PENDING` e publica a mensagem na fila do RabbitMQ.
 4. O **consumer** (`consumer.php`) consome a mensagem da fila, simula o processamento e atualiza o status para `PROCESSED` no banco de dados.
-5. O frontend lista o histórico de notificações via `GET /api.php`. **A leitura passa por um cache Memcached com TTL de 5s** — em cache miss a API faz `SELECT` no MariaDB e popula o cache; em cache hit, retorna imediatamente. Toda notificação criada via `POST` ou removida via `DELETE` invalida o cache, então o histórico sempre reflete o estado mais recente logo após uma ação do usuário.
+5. O frontend lista o histórico de notificações via `GET /api.php`. **A leitura passa por um cache Memcached com TTL de 5s**, em cache miss a API faz `SELECT` no MariaDB e popula o cache; em cache hit, retorna imediatamente. Toda notificação criada via `POST` ou removida via `DELETE` invalida o cache, então o histórico sempre reflete o estado mais recente logo após uma ação do usuário.
 
 ## Stack Tecnológica
 
@@ -110,7 +110,7 @@ docker compose up --build -d
 ```
 
 Esse comando vai:
-- Construir a imagem PHP com as extensões necessárias (`pdo_mysql`, `sockets`, `memcached` — esta última via PECL no build)
+- Construir a imagem PHP com as extensões necessárias (`pdo_mysql`, `sockets`, `memcached`, esta última via PECL no build)
 - Iniciar 6 serviços: **Nginx**, **PHP-FPM**, **Consumer**, **MariaDB**, **RabbitMQ** e **Memcached**
 - Executar o `schema.sql` automaticamente para criar a tabela `notifications`
 
@@ -127,7 +127,7 @@ Para acessar o painel do RabbitMQ, use as credenciais padrão:
 - **Usuário:** `guest`
 - **Senha:** `guest`
 
-A porta `11212` do host mapeia para a `11211` interna do container Memcached. Útil só para diagnóstico manual — a aplicação alcança o Memcached pela rede do docker e não passa por esta porta.
+A porta `11212` do host mapeia para a `11211` interna do container Memcached. Útil só para diagnóstico manual, a aplicação alcança o Memcached pela rede do docker e não passa por esta porta.
 
 ```bash
 echo "stats" | nc localhost 11212 | head -20   # contadores ao vivo (hits / misses / cmd_set / uptime)
