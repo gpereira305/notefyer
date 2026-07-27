@@ -56,6 +56,13 @@ button:hover {
     opacity: 0.8;
 }
 
+button:disabled,
+button.processing,
+button.processing-clear {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
 section {
     margin-top: 20px;
     display: flex;
